@@ -82,6 +82,7 @@ summary(lm.fit)
 
 We can use the `names()` function in order to find out what other pieces of information  are stored in `lm.fit`.
 Although we can extract these quantities by name---e.g. `lm.fit$coefficients`---it is safer to use the extractor functions like `coef()` to access them.
+- *Question* (what makes using `coef()` safer?)
 
 ```{r chunk6}
 names(lm.fit)
@@ -103,8 +104,12 @@ predict(lm.fit, data.frame(lstat = (c(5, 10, 15))),
     interval = "prediction")
 ```
 
-For instance, the 95\,\% confidence interval associated with a `lstat` value of 10 is $(24.47, 25.63)$, and the 95\,\% prediction interval is $(12.828, 37.28)$.
-As expected, the confidence and prediction intervals are centered around the same point (a predicted value of $25.05$ for `medv` when `lstat` equals 10), but the latter are substantially wider.
+For instance, 
+
+- the 95\,\% confidence interval associated with a `lstat` value of 10 is $(24.47, 25.63)$,  (i.e., you are 95% confident that the mean value of the predicted home value with the given input parameters (lstat = 10) is within 24.47 and 25.63) and,
+- the 95\,\% prediction interval is $(12.828, 37.28)$, (i.e., you are 95% confident that the next home that will be sold with these input parameters (`lstat=10`) is within 12.82 amd 37.27).
+- Since the predicted value of a single sample is more uncertain that the mean, the prediction interval is always larger than the confidence interval. For more details see [SO-Link1](https://stats.stackexchange.com/a/271232/85847) and [StatsByJim](https://statisticsbyjim.com/hypothesis-testing/confidence-prediction-tolerance-intervals/)
+- As expected, the confidence and prediction intervals are centered around the same point (a predicted value of $25.05$ for `medv` when `lstat` equals 10), but the latter are substantially wider.
 
 We will now plot `medv` and `lstat` along with the least squares regression line using the `plot()` and `abline()` functions.
 
@@ -184,13 +189,22 @@ lm.fit <- lm(medv ~ ., data = Boston)
 summary(lm.fit)
 ```
 
+- The feature `age` which was significant when used with `lstat` is not so significant in the presence of other variables. This suggest interaction between the features.
+
 We can access the individual components of a summary object by name
 (type `?summary.lm` to see what is available). Hence
 `summary(lm.fit)$r.sq` gives us the $R^2$, and
 `summary(lm.fit)$sigma` gives us the RSE. The `vif()`
 function, part of the `car` package, can be used to compute variance
-inflation factors.   Most VIF's are
-low to moderate for this data. The `car` package is not part of the base `R` installation so it must be downloaded the first time you use it via the `install.packages()` function in `R`.
+inflation factors (VIF).  
+
+- VIF of the $j^{th}$ predictor is defined as
+  \[ VIF_j = \frac{1}{1-R^2_j}\]
+where $R^2_j$ is obtained by regressing the $j^{th}$ predictor on the remaining predictors.
+-  A VIF of 1 means that there is no correlation among the jth predictor and the remaining predictor variables, and hence the variance of bj is not inflated at all. The general rule of thumb is that VIFs exceeding 4 warrant further investigation, while VIFs exceeding 10 are signs of serious multicollinearity requiring correction.
+- More details on VIF are available on [Stat 462](https://online.stat.psu.edu/stat462/node/180/)
+
+Most VIF's are low to moderate for this data. The `car` package is not part of the base `R` installation so it must be downloaded the first time you use it via the `install.packages()` function in `R`.
 
 ```{r chunk16}
 library(car)
@@ -266,6 +280,13 @@ summary(lm.fit5)
 This suggests that including additional  polynomial terms, up to fifth order, leads to an improvement in the model fit! However, further investigation of the data reveals that no polynomial terms beyond fifth order have significant $p$-values
 in a regression fit.
 
+```{r}
+par(mfrow = c(2, 2))
+plot(lm.fit5)
+```
+
+- The residual plot appears like the errors are increasing for higher factor values (heteroscadasticity)
+
  By default, the `poly()` function orthogonalizes the predictors:
  this means that the features output by this function are not simply a
  sequence of powers of the argument. However, a linear model applied to the output of the `poly()` function will have the same fitted values as a linear model applied to the raw polynomials (although the coefficient estimates, standard errors, and p-values will differ). In order to obtain the raw polynomials from the `poly()` function,  the argument `raw = TRUE` must be used.
@@ -308,6 +329,17 @@ Use `?contrasts` to learn about other contrasts, and how to set them.
 `R` has created a `ShelveLocGood` dummy variable that takes on a value of 1 if the shelving location is good, and 0 otherwise. It has also created a `ShelveLocMedium` dummy variable that equals 1 if the shelving location is medium, and 0 otherwise.
 A bad shelving location corresponds to a zero for each of the two dummy variables.
 The fact that the coefficient for `ShelveLocGood` in the regression output is positive indicates that a good shelving location is associated with high sales (relative to a bad location). And `ShelveLocMedium` has a smaller positive coefficient, indicating that a medium shelving location is associated with higher sales than a bad shelving location but lower sales than a good shelving location.
+
+- We can also create interaction variables between quantitative (price) and qualitative(ShelveLoc) variables
+
+
+```{r}
+lm.fit <- lm(Sales ~ . + Income:Advertising + Price:ShelveLoc, 
+    data = Carseats)
+summary(lm.fit)
+contrasts(ShelveLoc)
+```
+The interaction between Price and ShelveLoc has minimal influence on the target variable.
 
 
 ## Writing  Functions
